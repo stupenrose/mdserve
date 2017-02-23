@@ -7,6 +7,8 @@ import java.io.File
 import org.apache.commons.io.FileUtils
 import org.httpobjects.util.ClasspathResourceObject
 import org.httpobjects.util.MimeTypeTool
+import org.commonmark.ext.heading.anchor.HeadingAnchorExtension
+import java.util.Arrays
 
 object MarkdownServe extends App {
   val port = Integer.parseInt(args(0))
@@ -61,8 +63,10 @@ object MarkdownServe extends App {
     import org.commonmark.renderer.html.HtmlRenderer
     import org.commonmark.parser.Parser
     val parser = Parser.builder().build();
+    
     val document = parser.parse(text);
-    val renderer = HtmlRenderer.builder().build();
+    val renderer = HtmlRenderer.builder()
+                    .extensions(Arrays.asList(HeadingAnchorExtension.create())).build();
     renderer.render(document); 
   }
 }
