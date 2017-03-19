@@ -11,7 +11,7 @@
 
 	<properties>
 		<httpobjects-version>0.11.0</httpobjects-version>
-		<commonmark-version>0.8.0</commonmark-version>
+		<commonmark-version>0.9.0</commonmark-version>
 	</properties>
 
 	<build>
@@ -116,6 +116,12 @@
 			<artifactId>commonmark-ext-heading-anchor</artifactId>
 			<version>${commonmark-version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.atlassian.commonmark</groupId>
+			<artifactId>commonmark-ext-gfm-strikethrough</artifactId>
+			<version>${commonmark-version}</version>
+		</dependency>
+		
 		
 	</dependencies>
 </project>

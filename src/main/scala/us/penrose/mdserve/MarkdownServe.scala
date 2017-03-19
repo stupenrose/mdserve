@@ -3,16 +3,18 @@ package us.penrose.mdserve
 import org.httpobjects.jetty.HttpObjectsJettyHandler
 import org.httpobjects.{HttpObject, Request}
 import org.httpobjects.DSL._
-import java.io.File
+import java.io.{File => FilesystemPath}
 import org.apache.commons.io.FileUtils
 import org.httpobjects.util.ClasspathResourceObject
 import org.httpobjects.util.MimeTypeTool
 import org.commonmark.ext.heading.anchor.HeadingAnchorExtension
 import java.util.Arrays
+import java.nio.charset.Charset
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 
 object MarkdownServe extends App {
   val port = Integer.parseInt(args(0))
-  val root = new File(args(1))
+  val rootDirectory = new FilesystemPath(args(1))
   
    HttpObjectsJettyHandler.launchServer(8080, 
        new ClasspathResourceObject("/styles.css", "/styles.css", getClass()),
@@ -22,27 +24,27 @@ object MarkdownServe extends App {
        new HttpObject("/{resource*}"){
          override def get(r:Request) = {
            val path = r.path().valueFor("resource")
-           val finalPath = extension(path) match {
+           val pathPlusFileExtension = fileExtension(path) match {
              case None => path + ".md"
              case Some(_) => path
            }
-           val f = new File(root, finalPath)
+           val filePath = new FilesystemPath(rootDirectory, pathPlusFileExtension)
            
-           if(!f.exists()){
+           if(!filePath.exists()){
              NOT_FOUND
            }else{
-             val data = if(f.getName.endsWith(".md")){
-             Html(s"""<html>
-                        <title>${f.getName}</title>
+             val data = if(filePath.getName.endsWith(".md")){
+               Html(s"""<html>
+                        <title>${filePath.getName}</title>
                         <link rel="stylesheet" href="styles.css"/>
                         <body>
-                          ${renderMarkdown(FileUtils.readFileToString(f))}
+                          ${renderMarkdown(FileUtils.readFileToString(filePath, Charset.forName("ASCII")))}
                         </body>
                       </html>""")
              }else{
                val mimeTypes = new MimeTypeTool()
                
-               Bytes(mimeTypes.guessMimeTypeFromName(f.getName), FileUtils.readFileToByteArray(f))
+               Bytes(mimeTypes.guessMimeTypeFromName(filePath.getName), FileUtils.readFileToByteArray(filePath))
              }
              OK(data)
            }
@@ -50,7 +52,7 @@ object MarkdownServe extends App {
       }
   )
    
-   def extension(name:String) = {
+   def fileExtension(name:String):Option[String] = {
     val idx = name.lastIndexOf('.')
     if(idx == -1){
       None
@@ -62,11 +64,15 @@ object MarkdownServe extends App {
    def renderMarkdown(text:String) = {
     import org.commonmark.renderer.html.HtmlRenderer
     import org.commonmark.parser.Parser
-    val parser = Parser.builder().build();
+    val extensions = Arrays.asList(
+                        HeadingAnchorExtension.create(),
+                        StrikethroughExtension.create())
+                        
+    val parser = Parser.builder().extensions(extensions).build();
     
     val document = parser.parse(text);
     val renderer = HtmlRenderer.builder()
-                    .extensions(Arrays.asList(HeadingAnchorExtension.create())).build();
+                    .extensions(extensions).build();
     renderer.render(document); 
   }
 }
