@@ -11,12 +11,17 @@ import org.commonmark.ext.heading.anchor.HeadingAnchorExtension
 import java.util.Arrays
 import java.nio.charset.Charset
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
+import org.apache.commons.io.IOUtils
 
 object MarkdownServe extends App {
   val port = Integer.parseInt(args(0))
-  val rootDirectory = new FilesystemPath(args(1))
+  val fs:Filesystem = args(1) match {
+    case local if local.startsWith("/") => LocalFilesystem
+    case web if web.startsWith("http") => WebFilesystem
+  }
+  val rootDirectory:FSPath = fs.of(args(1))
   
-   HttpObjectsJettyHandler.launchServer(8080, 
+   HttpObjectsJettyHandler.launchServer(port, 
        new ClasspathResourceObject("/styles.css", "/styles.css", getClass()),
        new HttpObject("/"){
          override def get(r:Request) = SEE_OTHER(Location("/home"))
@@ -28,23 +33,25 @@ object MarkdownServe extends App {
              case None => path + ".md"
              case Some(_) => path
            }
-           val filePath = new FilesystemPath(rootDirectory, pathPlusFileExtension)
+           val filePath = rootDirectory.child(pathPlusFileExtension)
            
            if(!filePath.exists()){
              NOT_FOUND
            }else{
              val data = if(filePath.getName.endsWith(".md")){
+               val text = fs.read(filePath, IOUtils.toString(_, Charset.forName("ASCII")))
                Html(s"""<html>
                         <title>${filePath.getName}</title>
                         <link rel="stylesheet" href="styles.css"/>
                         <body>
-                          ${renderMarkdown(FileUtils.readFileToString(filePath, Charset.forName("ASCII")))}
+                          ${renderMarkdown(text)}
                         </body>
                       </html>""")
              }else{
                val mimeTypes = new MimeTypeTool()
+               val bytes = fs.read(filePath, IOUtils.toByteArray(_))
                
-               Bytes(mimeTypes.guessMimeTypeFromName(filePath.getName), FileUtils.readFileToByteArray(filePath))
+               Bytes(mimeTypes.guessMimeTypeFromName(filePath.getName), bytes)
              }
              OK(data)
            }
