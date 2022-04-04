@@ -15,12 +15,13 @@ import org.apache.commons.io.IOUtils
 
 object MarkdownServe extends App {
   val port = Integer.parseInt(args(0))
-  val fs:Filesystem = args(1) match {
+  val source = args(1)
+  val fs:Filesystem = source match {
     case local if local.startsWith("/") => LocalFilesystem
     case web if web.startsWith("http") => WebFilesystem
   }
   val rootDirectory:FSPath = fs.of(args(1))
-  
+  println(s"Launching on port ${port} serving ${source}") 
    HttpObjectsJettyHandler.launchServer(port, 
        new ClasspathResourceObject("/styles.css", "/styles.css", getClass()),
        new HttpObject("/"){
